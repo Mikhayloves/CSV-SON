@@ -10,6 +10,7 @@ import com.opencsv.bean.CsvToBeanBuilder;
 import org.w3c.dom.*;
 import org.xml.sax.SAXException;
 
+import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import java.io.File;
@@ -88,45 +89,29 @@ public class Main {
         return json;
     }
 
-    public static List<Employee> parseXML(String string) throws ParserConfigurationException, IOException, SAXException {
-        List<Employee> employees = new ArrayList<>();
-        try {
-            var factory = DocumentBuilderFactory.newInstance();
-            var builder = factory.newDocumentBuilder();
-            var filePath = new File(string);
-            Document document = builder.parse(filePath);
-            document.getDocumentElement().normalize();
-            System.out.println("Корневой элемент: " + document.getDocumentElement().getNodeName());
-            NodeList nodeList = document.getElementsByTagName("data.xml");
-            for (int i = 0; i < nodeList.getLength(); i++) {
-                employees.add(getEmployee(nodeList.item(i)));
+    public static List<Employee> parseXML(String fileName) throws ParserConfigurationException, IOException, SAXException {
+        List<Employee> employees = new ArrayList<Employee>();
+        Employee employee = null;
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder builder = factory.newDocumentBuilder();
+        Document doc = builder.parse(new File(fileName));
+        NodeList staff = doc.getElementsByTagName("employee");
+        for (int i = 0; i < staff.getLength(); i++) {
+            Node node = staff.item(i);
+            if (node.getNodeType() == Node.ELEMENT_NODE) {
+                Element element = (Element) node;
+
+                employee = new Employee();
+                employee.setId(Integer.parseInt(element.getElementsByTagName("id").item(0).getTextContent()));
+                employee.setFirstName(element.getElementsByTagName("firstName").item(0).getTextContent());
+                employee.setLastName(element.getElementsByTagName("lastName").item(0).getTextContent());
+                employee.setCountry(element.getElementsByTagName("country").item(0).getTextContent());
+                employee.setAge(Integer.parseInt(element.getElementsByTagName("age").item(0).getTextContent()));
+
+                employees.add(employee);
             }
-            for (Employee employee : employees) {
-                System.out.println(employee.toString());
-            }
-        } catch (IOException | SAXException | ParserConfigurationException e) {
-            e.printStackTrace();
         }
         return employees;
-    }
-
-    private static Employee getEmployee(Node node) {
-        Employee employee = new Employee();
-        if (node.getNodeType() == Node.ELEMENT_NODE) {
-            Element element = (Element) node;
-            employee.setId(Integer.parseInt(getTagValue("Id", element)));
-            employee.setFirstName(getTagValue("FirstName", element));
-            employee.setLastName(getTagValue("LastName", element));
-            employee.setCountry(getTagValue("Country", element));
-            employee.setAge(Integer.parseInt(getTagValue("Age", element)));
-        }
-        return employee;
-    }
-
-    private static String getTagValue(String tag, Element element) {
-        NodeList nodeList = element.getElementsByTagName(tag).item(0).getChildNodes();
-        Node node = (Node) nodeList.item(0);
-        return node.getNodeValue();
     }
 }
 
