@@ -2,17 +2,14 @@ package Project;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.google.gson.JsonArray;
 import com.google.gson.reflect.TypeToken;
 import com.opencsv.CSVReader;
-import com.opencsv.CSVWriter;
 import com.opencsv.bean.ColumnPositionMappingStrategy;
 import com.opencsv.bean.CsvToBean;
 import com.opencsv.bean.CsvToBeanBuilder;
 import org.w3c.dom.*;
 import org.xml.sax.SAXException;
 
-import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import java.io.File;
@@ -20,7 +17,6 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.Type;
-import java.sql.SQLOutput;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -92,40 +88,45 @@ public class Main {
         return json;
     }
 
-    public static List <Employee> parseXML(String string) throws ParserConfigurationException, IOException, SAXException {
+    public static List<Employee> parseXML(String string) throws ParserConfigurationException, IOException, SAXException {
         List<Employee> employees = new ArrayList<>();
         try {
             var factory = DocumentBuilderFactory.newInstance();
             var builder = factory.newDocumentBuilder();
             var filePath = new File(string);
             Document document = builder.parse(filePath);
-            Node root = document.getDocumentElement();
-            read(root);
-            System.out.println("Коренвой " + root.getNodeName());
+            document.getDocumentElement().normalize();
+            System.out.println("Корневой элемент: " + document.getDocumentElement().getNodeName());
+            NodeList nodeList = document.getElementsByTagName("data.xml");
+            for (int i = 0; i < nodeList.getLength(); i++) {
+                employees.add(getEmployee(nodeList.item(i)));
+            }
+            for (Employee employee : employees) {
+                System.out.println(employee.toString());
+            }
         } catch (IOException | SAXException | ParserConfigurationException e) {
             e.printStackTrace();
         }
         return employees;
     }
 
-    public static void read(Node node) {
-        NodeList nodeList = node.getChildNodes();
-        Employee employee = null;
-        for (int i = 0; i < nodeList.getLength(); i++) {
-            Node node_ = nodeList.item(i);
-            if (Node.ENTITY_NODE == node_.getNodeType()) {
-                var element = (Element) node_;
-                NamedNodeMap map = element.getAttributes();
-                employee = new Employee();
-                for (int j = 0; j < map.getLength(); j++) {
-                    String attrName = map.item(j).getNodeName();
-                    String attrValue = map.item(j).getNodeValue();
-
-                    System.out.println("Атрибут " + attrName + "; значение " + attrValue);
-                }
-                read(node_);
-            }
+    private static Employee getEmployee(Node node) {
+        Employee employee = new Employee();
+        if (node.getNodeType() == Node.ELEMENT_NODE) {
+            Element element = (Element) node;
+            employee.setId(Integer.parseInt(getTagValue("Id", element)));
+            employee.setFirstName(getTagValue("FirstName", element));
+            employee.setLastName(getTagValue("LastName", element));
+            employee.setCountry(getTagValue("Country", element));
+            employee.setAge(Integer.parseInt(getTagValue("Age", element)));
         }
+        return employee;
+    }
+
+    private static String getTagValue(String tag, Element element) {
+        NodeList nodeList = element.getElementsByTagName(tag).item(0).getChildNodes();
+        Node node = (Node) nodeList.item(0);
+        return node.getNodeValue();
     }
 }
 
